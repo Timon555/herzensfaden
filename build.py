@@ -127,6 +127,17 @@ FOOTER = f'''<footer class="site-footer">
   </div>
 </footer>'''
 
+# Datenschutzfreundliche, cookielose Besucherstatistik (GoatCounter).
+# 1. Kostenlos auf https://www.goatcounter.com registrieren und einen Code wählen.
+# 2. Diesen Code hier eintragen (z. B. "herzensfaden" -> herzensfaden.goatcounter.com).
+# Leerer String ("") schaltet die Statistik komplett ab.
+GOATCOUNTER_CODE = "herzensfaden"
+
+ANALYTICS = (
+    f'<script data-goatcounter="https://{GOATCOUNTER_CODE}.goatcounter.com/count" '
+    'async src="//gc.zgo.at/count.js"></script>'
+) if GOATCOUNTER_CODE else ""
+
 TEMPLATE = '''<!DOCTYPE html>
 <html lang="de">
 <head>
@@ -153,6 +164,7 @@ TEMPLATE = '''<!DOCTYPE html>
 </main>
 {footer}
 <script src="assets/js/main.js" defer></script>
+{analytics}
 </body>
 </html>
 '''
@@ -165,6 +177,7 @@ def build():
         html = TEMPLATE.format(
             title=title, desc=desc,
             header=header(active), body=body, footer=FOOTER,
+            analytics=ANALYTICS,
         )
         out = os.path.join(ROOT, slug + ".html")
         with open(out, "w", encoding="utf-8") as f:
