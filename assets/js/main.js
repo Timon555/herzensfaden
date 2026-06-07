@@ -56,27 +56,157 @@
     });
   });
 
-  /* ---- Contact form ---- */
-  var form = document.querySelector(".contact-form");
-  if (form) {
+  /* ---- Forms (mailto by default, optional fetch backend) ---- */
+  var DEFAULT_RECIPIENT = "brigitte.meissner@bluewin.ch";
+
+  function cleanLabel(text) {
+    return (text || "").replace(/\*/g, "").replace(/\s+/g, " ").trim();
+  }
+
+  // Human-readable label for a form control, used to build the e-mail text.
+  function fieldLabel(el) {
+    if (el.dataset && el.dataset.label) { return el.dataset.label; }
+    var field = el.closest(".field");
+    if (field) {
+      var span = field.querySelector(":scope > span");
+      if (span) { return cleanLabel(span.textContent); }
+    }
+    var label = el.closest("label");
+    if (label) { return cleanLabel(label.textContent); }
+    return el.name;
+  }
+
+  // Collect all filled-in controls in DOM order; checkbox groups are merged.
+  function collectFields(form) {
+    var lines = [];
+    var index = {};
+    Array.prototype.forEach.call(form.elements, function (el) {
+      if (!el.name || el.disabled || el.name === "hp_field") { return; }
+      var type = (el.type || "").toLowerCase();
+      if (type === "submit" || type === "button" || type === "reset" || type === "file") { return; }
+      if ((type === "checkbox" || type === "radio") && !el.checked) { return; }
+      var value = (el.value || "").trim();
+      if (!value) { return; }
+      if (type === "checkbox" && index[el.name] != null) {
+        lines[index[el.name]].value += ", " + value;
+        return;
+      }
+      if (type === "checkbox") { index[el.name] = lines.length; }
+      lines.push({ label: fieldLabel(el), value: value });
+    });
+    return lines;
+  }
+
+  // HTML5 constraint validation with visible field highlighting.
+  function validate(form, result) {
+    var firstInvalid = null;
+    Array.prototype.forEach.call(form.elements, function (el) {
+      if (!el.name || el.disabled || !el.willValidate) { return; }
+      var field = el.closest(".field") || el.closest(".check-group");
+      if (field) { field.classList.remove("field--error"); }
+      if (el.checkValidity()) {
+        el.removeAttribute("aria-invalid");
+      } else {
+        if (field) { field.classList.add("field--error"); }
+        el.setAttribute("aria-invalid", "true");
+        if (!firstInvalid) { firstInvalid = el; }
+      }
+    });
+    if (firstInvalid) {
+      if (result) {
+        result.textContent = "Bitte ergänzen Sie die rot markierten Felder.";
+        result.classList.add("is-error");
+        result.classList.remove("is-ok");
+      }
+      firstInvalid.focus();
+      return false;
+    }
+    return true;
+  }
+
+  function buildMailto(form) {
+    var lines = collectFields(form);
+    var topicEl = form.querySelector('[name="topic"], [name="region"]');
+    var topic = topicEl ? topicEl.value : "";
+    var recipient = form.dataset.mailtoRecipient || DEFAULT_RECIPIENT;
+    var subjectBase = form.dataset.mailtoSubject || "Kontakt/Anmeldung Herzensfaden";
+    var subject = subjectBase + (topic ? " – " + topic : "");
+    var body = lines.map(function (l) { return l.label + ": " + l.value; }).join("\n") + "\n";
+    return "mailto:" + encodeURIComponent(recipient) +
+      "?subject=" + encodeURIComponent(subject) +
+      "&body=" + encodeURIComponent(body);
+  }
+
+  function setResult(result, text, ok) {
+    if (!result) { return; }
+    result.textContent = text;
+    result.classList.toggle("is-ok", !!ok);
+    result.classList.toggle("is-error", !ok);
+  }
+
+  document.querySelectorAll("form.contact-form, form.mailto-form").forEach(function (form) {
     var result = form.querySelector(".form-result");
+
+    // Inject a spam honeypot: bots tend to fill every field; humans never see it.
+    if (!form.querySelector('[name="hp_field"]')) {
+      var hp = document.createElement("div");
+      hp.className = "hp";
+      hp.setAttribute("aria-hidden", "true");
+      hp.innerHTML = '<label>Bitte freilassen<input type="text" name="hp_field" tabindex="-1" autocomplete="off"></label>';
+      form.appendChild(hp);
+    }
+
     form.addEventListener("submit", function (event) {
       event.preventDefault();
-      var data = new FormData(form);
-      var name = data.get("name") || "";
-      var phone = data.get("phone") || "";
-      var email = data.get("email") || "";
-      var topic = data.get("topic") || "Kontaktanfrage";
-      var message = data.get("message") || "";
-      var subject = "Kontakt/Anmeldung Herzensfaden – " + topic;
-      var body = "Name: " + name + "\nTelefon: " + phone + "\nE-Mail: " + email + "\nAnliegen: " + topic + "\n\nNachricht:\n" + message;
-      var mailto = "mailto:brigitte.meissner@bluewin.ch?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
-      if (result) {
-        result.textContent = "Ihr E-Mail-Programm wird geöffnet. Bitte prüfen Sie den Text und senden Sie die Anfrage ab.";
+      if (!validate(form, result)) { return; }
+
+      // Honeypot triggered → silently pretend success, send nothing.
+      var hpField = form.querySelector('[name="hp_field"]');
+      if (hpField && hpField.value) {
+        setResult(result, "Vielen Dank für Ihre Nachricht.", true);
+        return;
       }
-      window.location.href = mailto;
+
+      var actionUrl = form.dataset.actionUrl;
+      if (actionUrl) {
+        // Real submission to a form backend (e.g. Formspree) – no e-mail program needed.
+        var submitBtn = form.querySelector('[type="submit"]');
+        var label = submitBtn ? submitBtn.textContent : "";
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Wird gesendet …"; }
+        setResult(result, "Wird gesendet …", true);
+        fetch(actionUrl, {
+          method: "POST",
+          body: new FormData(form),
+          headers: { Accept: "application/json" }
+        }).then(function (res) {
+          if (!res.ok) { throw new Error("Request failed"); }
+          form.reset();
+          setResult(result, "Vielen Dank! Ihre Nachricht wurde gesendet. Ich melde mich so schnell wie möglich zurück.", true);
+        }).catch(function () {
+          setResult(result, "Senden nicht möglich. Bitte nutzen Sie das E-Mail-Programm – es öffnet sich jetzt.", false);
+          window.location.href = buildMailto(form);
+        }).then(function () {
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = label; }
+        });
+        return;
+      }
+
+      // Default: hand off to the visitor's e-mail program with a prefilled message.
+      setResult(result, "Ihr E-Mail-Programm wird geöffnet. Bitte prüfen Sie den Text und senden Sie die Nachricht ab.", true);
+      window.location.href = buildMailto(form);
     });
-  }
+
+    // Clear the error state on a field as soon as the visitor edits it.
+    form.addEventListener("input", function (event) {
+      var el = event.target;
+      if (!el.name) { return; }
+      var field = el.closest(".field") || el.closest(".check-group");
+      if (field && el.willValidate && el.checkValidity()) {
+        field.classList.remove("field--error");
+        el.removeAttribute("aria-invalid");
+      }
+    });
+  });
 
   /* ---- Footer year ---- */
   var y = document.querySelector("[data-year]");

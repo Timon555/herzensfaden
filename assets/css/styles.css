@@ -628,10 +628,55 @@ body.nav-open .nav-toggle span::after { transform: translateY(-6px) rotate(-45de
 }
 .form-result {
   margin-top: 1rem;
-  color: var(--rose-dark);
   font-weight: 700;
+  min-height: 1px;
 }
+.form-result.is-ok { color: var(--rose-dark); }
+.form-result.is-error { color: #b42318; }
 .req { color: var(--rose-deep); }
+
+/* Validation error state */
+.field--error input,
+.field--error select,
+.field--error textarea {
+  border-color: #d4503e;
+  background: #fdf3f1;
+}
+.field--error input:focus,
+.field--error select:focus,
+.field--error textarea:focus {
+  border-color: #d4503e;
+  box-shadow: 0 0 0 4px rgba(212, 80, 62, .15);
+}
+
+/* Checkbox / radio groups */
+.check-group { display: grid; gap: .55rem; }
+.check-group > .legend {
+  font-weight: 800; font-size: .9rem; color: var(--ink); margin-bottom: .15rem;
+}
+.check-group.field--error { padding: .2rem; border-radius: 12px; outline: 2px solid #d4503e; }
+.check {
+  display: flex; align-items: flex-start; gap: .7rem;
+  padding: .7em .9em;
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color .2s ease, background .2s ease;
+}
+.check:hover { border-color: var(--rose-soft); }
+.check input { width: 1.15rem; height: 1.15rem; margin-top: .15rem; accent-color: var(--rose); flex: none; }
+.check:has(input:checked) { border-color: var(--rose); background: var(--rose-softer); }
+.check span { font-size: .96rem; line-height: 1.35; }
+.check span small { display: block; color: var(--ink-faint); font-weight: 400; font-size: .85rem; }
+
+/* Spam honeypot – hidden from people, visible to bots */
+.hp {
+  position: absolute !important;
+  left: -9999px !important;
+  width: 1px; height: 1px;
+  overflow: hidden;
+}
 
 /* ---------- Page hero (sub pages) ---------- */
 .page-hero {
