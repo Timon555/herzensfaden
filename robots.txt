@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://timon555.github.io/herzensfaden/sitemap.xml

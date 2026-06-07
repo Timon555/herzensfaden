@@ -59,6 +59,13 @@
   /* ---- Forms (mailto by default, optional fetch backend) ---- */
   var DEFAULT_RECIPIENT = "brigitte.meissner@bluewin.ch";
 
+  // Optional: echten Versand aktivieren (Anfragen kommen direkt ins Postfach,
+  // ohne das E-Mail-Programm der Besucher zu öffnen).
+  // 1. Kostenloses Formular auf https://formspree.io erstellen.
+  // 2. Die Endpunkt-URL hier eintragen, z. B. "https://formspree.io/f/abcdwxyz".
+  // Leer ("") lässt alles beim bisherigen mailto-Verhalten.
+  var FORM_ENDPOINT = "https://formspree.io/f/xqeopnva";
+
   function cleanLabel(text) {
     return (text || "").replace(/\*/g, "").replace(/\s+/g, " ").trim();
   }
@@ -81,7 +88,7 @@
     var lines = [];
     var index = {};
     Array.prototype.forEach.call(form.elements, function (el) {
-      if (!el.name || el.disabled || el.name === "hp_field") { return; }
+      if (!el.name || el.disabled || el.name === "_gotcha") { return; }
       var type = (el.type || "").toLowerCase();
       if (type === "submit" || type === "button" || type === "reset" || type === "file") { return; }
       if ((type === "checkbox" || type === "radio") && !el.checked) { return; }
@@ -124,13 +131,17 @@
     return true;
   }
 
-  function buildMailto(form) {
-    var lines = collectFields(form);
+  function mailSubject(form) {
     var topicEl = form.querySelector('[name="topic"], [name="region"]');
     var topic = topicEl ? topicEl.value : "";
-    var recipient = form.dataset.mailtoRecipient || DEFAULT_RECIPIENT;
     var subjectBase = form.dataset.mailtoSubject || "Kontakt/Anmeldung Herzensfaden";
-    var subject = subjectBase + (topic ? " – " + topic : "");
+    return subjectBase + (topic ? " – " + topic : "");
+  }
+
+  function buildMailto(form) {
+    var lines = collectFields(form);
+    var recipient = form.dataset.mailtoRecipient || DEFAULT_RECIPIENT;
+    var subject = mailSubject(form);
     var body = lines.map(function (l) { return l.label + ": " + l.value; }).join("\n") + "\n";
     return "mailto:" + encodeURIComponent(recipient) +
       "?subject=" + encodeURIComponent(subject) +
@@ -148,11 +159,12 @@
     var result = form.querySelector(".form-result");
 
     // Inject a spam honeypot: bots tend to fill every field; humans never see it.
-    if (!form.querySelector('[name="hp_field"]')) {
+    // "_gotcha" is also recognised and filtered by Formspree.
+    if (!form.querySelector('[name="_gotcha"]')) {
       var hp = document.createElement("div");
       hp.className = "hp";
       hp.setAttribute("aria-hidden", "true");
-      hp.innerHTML = '<label>Bitte freilassen<input type="text" name="hp_field" tabindex="-1" autocomplete="off"></label>';
+      hp.innerHTML = '<label>Bitte freilassen<input type="text" name="_gotcha" tabindex="-1" autocomplete="off"></label>';
       form.appendChild(hp);
     }
 
@@ -161,22 +173,24 @@
       if (!validate(form, result)) { return; }
 
       // Honeypot triggered → silently pretend success, send nothing.
-      var hpField = form.querySelector('[name="hp_field"]');
+      var hpField = form.querySelector('[name="_gotcha"]');
       if (hpField && hpField.value) {
         setResult(result, "Vielen Dank für Ihre Nachricht.", true);
         return;
       }
 
-      var actionUrl = form.dataset.actionUrl;
+      var actionUrl = form.dataset.actionUrl || FORM_ENDPOINT;
       if (actionUrl) {
         // Real submission to a form backend (e.g. Formspree) – no e-mail program needed.
         var submitBtn = form.querySelector('[type="submit"]');
         var label = submitBtn ? submitBtn.textContent : "";
         if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = "Wird gesendet …"; }
         setResult(result, "Wird gesendet …", true);
+        var payload = new FormData(form);
+        if (!payload.has("_subject")) { payload.append("_subject", mailSubject(form)); }
         fetch(actionUrl, {
           method: "POST",
-          body: new FormData(form),
+          body: payload,
           headers: { Accept: "application/json" }
         }).then(function (res) {
           if (!res.ok) { throw new Error("Request failed"); }

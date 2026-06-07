@@ -4,9 +4,17 @@ Wraps each content/<slug>.html partial in the shared head/header/footer
 and writes a plain, deployable <slug>.html to the project root.
 Run:  python3 build.py
 """
-import os, re
+import os, json, datetime
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
+
+# Basis-URL der veröffentlichten Seite – ohne Schrägstrich am Ende.
+# Läuft die Seite unter einer eigenen Domain, hier eintragen,
+# z. B. "https://www.herzensfaden.com".
+BASE_URL = "https://timon555.github.io/herzensfaden"
+
+# Vorschaubild fürs Teilen (Open Graph / Twitter) – absolute URL.
+OG_IMAGE = BASE_URL + "/assets/img/home-hero.jpg"
 
 # (slug, <title>, meta description, nav key)
 PAGES = [
@@ -138,6 +146,37 @@ ANALYTICS = (
     'async src="//gc.zgo.at/count.js"></script>'
 ) if GOATCOUNTER_CODE else ""
 
+# Structured Data (JSON-LD): hilft Google, die Praxis als lokales Unternehmen
+# mit Adresse, Telefon und Inhaberin zu verstehen (Rich Results / Local SEO).
+STRUCTURED_DATA = {
+    "@context": "https://schema.org",
+    "@type": "MedicalBusiness",
+    "name": "Herzensfaden – Brigitte Meissner",
+    "description": "Hebamme, Craniosacral-Therapeutin und Autorin in Winterthur. "
+                   "Geburten verarbeiten, Mutter-Kind-Bindung fördern, Belastungen reduzieren.",
+    "url": BASE_URL + "/",
+    "telephone": "+41522033737",
+    "image": OG_IMAGE,
+    "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Im Geissacker 6",
+        "postalCode": "8404",
+        "addressLocality": "Winterthur",
+        "addressRegion": "ZH",
+        "addressCountry": "CH",
+    },
+    "founder": {
+        "@type": "Person",
+        "name": "Brigitte Renate Meissner",
+        "jobTitle": "Hebamme, Craniosacral-Therapeutin, Autorin",
+    },
+    "areaServed": ["CH", "DE", "AT"],
+    "knowsLanguage": ["de"],
+}
+JSONLD = ('<script type="application/ld+json">'
+          + json.dumps(STRUCTURED_DATA, ensure_ascii=False)
+          + '</script>')
+
 TEMPLATE = '''<!DOCTYPE html>
 <html lang="de">
 <head>
@@ -146,16 +185,25 @@ TEMPLATE = '''<!DOCTYPE html>
 <title>{title}</title>
 <meta name="description" content="{desc}">
 <meta name="author" content="Brigitte Meissner">
+<link rel="canonical" href="{canonical}">{robots}
 <meta property="og:title" content="{title}">
 <meta property="og:description" content="{desc}">
 <meta property="og:type" content="website">
 <meta property="og:locale" content="de_CH">
+<meta property="og:site_name" content="Herzensfaden">
+<meta property="og:url" content="{canonical}">
+<meta property="og:image" content="{og_image}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{title}">
+<meta name="twitter:description" content="{desc}">
+<meta name="twitter:image" content="{og_image}">
 <meta name="theme-color" content="#fbf5ef">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400..600;1,9..144,400..500&family=Nunito+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/css/styles.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M23.6 4c-3.4 0-6.3 2.7-7.6 5.6C14.7 6.7 11.8 4 8.4 4 3.8 4 0 7.8 0 12.4 0 21.8 9.5 24.3 16 34.1 22.1 24.3 32 21.5 32 12.4 32 7.8 28.2 4 23.6 4z' fill='%23eb458d'/%3E%3C/svg%3E">
+{jsonld}
 </head>
 <body>
 {header}
@@ -169,20 +217,56 @@ TEMPLATE = '''<!DOCTYPE html>
 </html>
 '''
 
+def page_url(slug):
+    return BASE_URL + "/" + ("" if slug == "index" else slug + ".html")
+
+def render(slug, title, desc, active, robots=""):
+    body_path = os.path.join(ROOT, "content", slug + ".html")
+    with open(body_path, encoding="utf-8") as f:
+        body = f.read().strip()
+    return TEMPLATE.format(
+        title=title, desc=desc,
+        canonical=page_url(slug), og_image=OG_IMAGE,
+        robots=("\n" + robots if robots else ""),
+        jsonld=JSONLD,
+        header=header(active), body=body, footer=FOOTER,
+        analytics=ANALYTICS,
+    )
+
+def write(name, content):
+    with open(os.path.join(ROOT, name), "w", encoding="utf-8") as f:
+        f.write(content)
+
 def build():
     for slug, title, desc, active in PAGES:
-        body_path = os.path.join(ROOT, "content", slug + ".html")
-        with open(body_path, encoding="utf-8") as f:
-            body = f.read().strip()
-        html = TEMPLATE.format(
-            title=title, desc=desc,
-            header=header(active), body=body, footer=FOOTER,
-            analytics=ANALYTICS,
-        )
-        out = os.path.join(ROOT, slug + ".html")
-        with open(out, "w", encoding="utf-8") as f:
-            f.write(html)
+        html = render(slug, title, desc, active)
+        write(slug + ".html", html)
         print("built", slug + ".html", f"({len(html)//1024} kB)")
+
+    # Eigene 404-Seite (von Suchmaschinen ausgenommen)
+    write("404.html", render(
+        "404", "Seite nicht gefunden | Herzensfaden",
+        "Diese Seite wurde nicht gefunden. Zur Startseite von Herzensfaden zurückkehren.",
+        "none", robots='<meta name="robots" content="noindex">'))
+    print("built 404.html")
+
+    # sitemap.xml
+    today = datetime.date.today().isoformat()
+    urls = "\n".join(
+        f"  <url><loc>{page_url(slug)}</loc><lastmod>{today}</lastmod></url>"
+        for slug, *_ in PAGES
+    )
+    sitemap = ('<?xml version="1.0" encoding="UTF-8"?>\n'
+               '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+               f"{urls}\n</urlset>\n")
+    write("sitemap.xml", sitemap)
+    print("built sitemap.xml")
+
+    # robots.txt
+    robots_txt = ("User-agent: *\nAllow: /\n\n"
+                  f"Sitemap: {BASE_URL}/sitemap.xml\n")
+    write("robots.txt", robots_txt)
+    print("built robots.txt")
 
 if __name__ == "__main__":
     build()
