@@ -56,6 +56,28 @@
     });
   });
 
+  /* ---- Contact form ---- */
+  var form = document.querySelector(".contact-form");
+  if (form) {
+    var result = form.querySelector(".form-result");
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      var data = new FormData(form);
+      var name = data.get("name") || "";
+      var phone = data.get("phone") || "";
+      var email = data.get("email") || "";
+      var topic = data.get("topic") || "Kontaktanfrage";
+      var message = data.get("message") || "";
+      var subject = "Kontakt/Anmeldung Herzensfaden – " + topic;
+      var body = "Name: " + name + "\nTelefon: " + phone + "\nE-Mail: " + email + "\nAnliegen: " + topic + "\n\nNachricht:\n" + message;
+      var mailto = "mailto:brigitte.meissner@bluewin.ch?subject=" + encodeURIComponent(subject) + "&body=" + encodeURIComponent(body);
+      if (result) {
+        result.textContent = "Ihr E-Mail-Programm wird geöffnet. Bitte prüfen Sie den Text und senden Sie die Anfrage ab.";
+      }
+      window.location.href = mailto;
+    });
+  }
+
   /* ---- Footer year ---- */
   var y = document.querySelector("[data-year]");
   if (y) { y.textContent = new Date().getFullYear(); }

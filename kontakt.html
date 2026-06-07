@@ -71,6 +71,66 @@
   </div>
 </section>
 
+<section class="section tint">
+  <div class="wrap split" style="align-items:stretch">
+    <div class="split-copy reveal">
+      <span class="eyebrow">Formular</span>
+      <h2>Ihre Anfrage direkt senden</h2>
+      <p class="lede">Nutzen Sie dieses Formular für Terminanfragen, Fortbildungsfragen, Bücher- oder Kartenbestellungen. Ich melde mich so schnell wie möglich zurück.</p>
+      <form class="form contact-form" action="#" method="post" novalidate>
+        <div class="form-row">
+          <label class="field">
+            <span>Name <span class="req">*</span></span>
+            <input type="text" name="name" required autocomplete="name" placeholder="Vorname und Nachname">
+          </label>
+          <label class="field">
+            <span>Telefon <span class="req">*</span></span>
+            <input type="tel" name="phone" required autocomplete="tel" placeholder="+41 52 203 37 37">
+          </label>
+        </div>
+        <div class="form-row">
+          <label class="field">
+            <span>E-Mail</span>
+            <input type="email" name="email" autocomplete="email" placeholder="name@adresse.ch">
+          </label>
+          <label class="field">
+            <span>Anliegen</span>
+            <select name="topic">
+              <option value="Praxis & Therapie">Praxis &amp; Therapie</option>
+              <option value="Fortbildung / Kurs">Fortbildung / Kurs</option>
+              <option value="Bücherbestellung">Bücherbestellung</option>
+              <option value="Poster & Postkarten">Poster &amp; Postkarten</option>
+              <option value="Allgemeine Anfrage">Allgemeine Anfrage</option>
+            </select>
+          </label>
+        </div>
+        <label class="field">
+          <span>Nachricht</span>
+          <textarea name="message" placeholder="Beschreiben Sie kurz Ihr Anliegen, Wunschdatum oder Thema."></textarea>
+        </label>
+        <div class="form-actions">
+          <button class="btn btn--lg" type="submit">Anfrage senden</button>
+          <span class="form-note">Die Anfrage wird in Ihr E-Mail-Programm übertragen.</span>
+        </div>
+        <p class="form-result" aria-live="polite"></p>
+      </form>
+    </div>
+    <div class="split-media reveal d1">
+      <div class="contact-card">
+        <div class="contact-row">
+          <span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3-8.6A2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg></span>
+          <div><b>Anmeldung &amp; Termine</b><a href="tel:+41522033737">+41 52 203 37 37</a><br><span style="font-size:.9rem;color:var(--ink-soft)">Bitte telefonisch direkt bei Brigitte Meissner</span></div>
+        </div>
+        <div class="contact-row">
+          <span class="fi"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></span>
+          <div><b>Praxisadresse</b><span style="color:var(--ink-soft)">Winterthur</span><br>Im Geissacker 6, 8404 Winterthur</div>
+        </div>
+      </div>
+      <div class="note mt-3">Alternativ können Sie mich gerne telefonisch erreichen. Ich freue mich auf Ihre Anfrage und gebe Ihnen zeitnah eine Rückmeldung.</div>
+    </div>
+  </div>
+</section>
+
 <!-- ============ ADRESSEN ============ -->
 <section class="section tint" id="adressen">
   <div class="wrap">
